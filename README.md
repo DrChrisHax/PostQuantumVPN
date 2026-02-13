@@ -1,4 +1,4 @@
-# C++ Project Template
+# Post Quantum VPN
 
 ## Overview
 
@@ -6,8 +6,8 @@
 
 ### Building the project
 ```
-make 
-make run # Builds and runs the app
+make run-client # Builds and runs the client
+make run-server # Builds and runs the server
 make help # Outputs all available make commands in the makefile
 ```
 
@@ -22,8 +22,8 @@ See the sample tests included for reference.
 
 ### Running Tests
 ```
-make test # Build and run all tests
-make build-test # Build the tests without running them
+make test # Builds all tests
+make run-test # Build the tests and runs all tests
 ```
 
 ## Authors
