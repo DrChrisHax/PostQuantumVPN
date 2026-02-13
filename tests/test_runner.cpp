@@ -1,5 +1,6 @@
 #include "tests.h"
 
+#include <string_view>
 #include <iostream>
 
 static int total_tests = 0;
@@ -56,12 +57,18 @@ int main(int argc, char* argv[]) {
 // Helper Functions
 // =============================================================================
 bool test_helper(std::string_view expected, std::string_view result) {
+    // ANSI color codes
+    const char* GREEN = "\033[32m";
+    const char* RED = "\033[31m";
+    const char* RESET = "\033[0m";
+
+
     if (result == expected) {
-        std::cout << "[PASS]" << std::endl;
+        std::cout << GREEN << "[PASS]" << RESET << "\n";
         return true;
     } else {
-        std::cout << "[FAIL] Expected: " << expected << std::endl;
-        std::cout << "[FAIL] Got:      " << result << std::endl;
+        std::cout << RED << "[FAIL]" << RESET << "Expected: " << expected << "\n";
+        std::cout << RED << "[FAIL]" << RESET << "Got:      " << result << "\n";
         return false;
     }
 }

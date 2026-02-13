@@ -1,5 +1,6 @@
 # ----- Project -----
-TARGET := app
+CLIENT_TARGET := PQ_VPN_Client
+SERVER_TARGET := PQ_VPN_Server
 TEST_TARGET := test_runner
 CXX := g++
 #CXX := clang++
@@ -7,7 +8,7 @@ WARN := -Wall -Wextra -Wpedantic -Wconversion -Wsign-conversion #-Werror
 STD := -std=c++23
 OPT := -O2
 DEP := -MMD -MP
-INCLUDES := -Iapp -Itests -Icore -Icore/os/$(PLATFORM) -Icore/templates
+INCLUDES := -Iclient -Iserver -Itests -Icore -Icore/os/$(PLATFORM) -Icore/templates
 
 # ----- File Extensions -----
 CXX_EXT := cpp
@@ -30,22 +31,22 @@ endif
 # ----- Directories -----
 OBJDIR := obj
 BINDIR := bin
-TESTDIR := tests
-TEST_OBJDIR := $(TESTDIR)/obj
-TEST_BINDIR := $(TESTDIR)/bin
 
 # ----- Source & Dependencies -----
-CORE_SRCS := $(wildcard core/*.$(CXX_EXT)) $(wildcard core/os/$(PLATFORM)/*.$(CXX_EXT)) 
-APP_SRCS := $(wildcard app/*.$(CXX_EXT))
-TEST_SRCS := $(wildcard $(TESTDIR)/*.$(CXX_EXT))
+CORE_SRCS   := $(wildcard core/*.$(CXX_EXT)) $(wildcard core/os/$(PLATFORM)/*.$(CXX_EXT))
+CLIENT_SRCS := $(wildcard client/*.$(CXX_EXT))
+SERVER_SRCS := $(wildcard server/*.$(CXX_EXT))
+TEST_SRCS   := $(wildcard tests/*.$(CXX_EXT))
 
-CORE_OBJS := $(patsubst %.$(CXX_EXT),$(OBJDIR)/%.o,$(CORE_SRCS))
-APP_OBJS := $(patsubst %.$(CXX_EXT),$(OBJDIR)/%.o,$(APP_SRCS))
-TEST_OBJS := $(patsubst $(TESTDIR)/%.$(CXX_EXT),$(TEST_OBJDIR)/%.o,$(TEST_SRCS))
+CORE_OBJS   := $(patsubst %.$(CXX_EXT),$(OBJDIR)/%.o,$(CORE_SRCS))
+CLIENT_OBJS := $(patsubst %.$(CXX_EXT),$(OBJDIR)/%.o,$(CLIENT_SRCS))
+SERVER_OBJS := $(patsubst %.$(CXX_EXT),$(OBJDIR)/%.o,$(SERVER_SRCS))
+TEST_OBJS   := $(patsubst %.$(CXX_EXT),$(OBJDIR)/%.o,$(TEST_SRCS))
 
-CORE_DEPS := $(CORE_OBJS:.o=.d) 
-APP_DEPS := $(APP_OBJS:.o=.d)
-TEST_DEPS := $(TEST_OBJS:.o=.d)
+CORE_DEPS   := $(CORE_OBJS:.o=.d)
+CLIENT_DEPS := $(CLIENT_OBJS:.o=.d)
+SERVER_DEPS := $(SERVER_OBJS:.o=.d)
+TEST_DEPS   := $(TEST_OBJS:.o=.d)
 
 # ----- Flags -----
 CXXFLAGS := $(STD) $(WARN) $(OPT) $(DEP) $(INCLUDES)
@@ -56,73 +57,80 @@ $(OBJDIR)/%.o: %.$(CXX_EXT)
 	@mkdir -p $(dir $@)
 	@$(CXX) $(CXXFLAGS) -c $< -o $@
 
-# ----- Test Object Directory -----
-$(TEST_OBJDIR)/%.o: $(TESTDIR)/%.$(CXX_EXT)
-	@mkdir -p $(dir $@)
-	@$(CXX) $(CXXFLAGS) -c $< -o $@
-
-# ----- Executable Directory -----
-$(BINDIR)/$(TARGET): $(APP_OBJS) $(CORE_OBJS)
+# ----- Executables -----
+$(BINDIR)/$(CLIENT_TARGET): $(CLIENT_OBJS) $(CORE_OBJS)
 	@mkdir -p $(BINDIR)
-	@$(CXX) $(APP_OBJS) $(CORE_OBJS) -o $@ $(LDFLAGS)
+	@$(CXX) $(CLIENT_OBJS) $(CORE_OBJS) -o $@ $(LDFLAGS)
+	@echo "[makefile] Built $(BINDIR)/$(CLIENT_TARGET)"
 
-# ----- Test Executable -----
-$(TEST_BINDIR)/$(TEST_TARGET): $(TEST_OBJS) $(CORE_OBJS)
-	@mkdir -p $(TEST_BINDIR)
+$(BINDIR)/$(SERVER_TARGET): $(SERVER_OBJS) $(CORE_OBJS)
+	@mkdir -p $(BINDIR)
+	@$(CXX) $(SERVER_OBJS) $(CORE_OBJS) -o $@ $(LDFLAGS)
+	@echo "[makefile] Built $(BINDIR)/$(SERVER_TARGET)"
+
+$(BINDIR)/$(TEST_TARGET): $(TEST_OBJS) $(CORE_OBJS)
+	@mkdir -p $(BINDIR)
 	@$(CXX) $(TEST_OBJS) $(CORE_OBJS) -o $@ $(LDFLAGS)
+	@echo "[makefile] Built $(BINDIR)/$(TEST_TARGET)"
 
 # ----- Commands -----
-.PHONY: all core app test build-tests clean clean-test clean-all run help
+.PHONY: all core client server test clean clean-all run-client run-server run-test
 
 all:
-	@$(MAKE) app
+	@$(MAKE) client
+	@$(MAKE) server
+	@$(MAKE) test
 
-core: $(CORE_OBJS)
-	@echo "[makefile] Core up to date (platform=$(PLATFORM))"
+client: $(BINDIR)/$(CLIENT_TARGET)
 
-app: $(BINDIR)/$(TARGET)
-	@echo "[makefile] app up to date"
+server: $(BINDIR)/$(SERVER_TARGET)
+
+test: $(BINDIR)/$(TEST_TARGET)
 
 clean:
 	@echo "[makefile] Removing obj/ and bin/"
 	@rm -rf $(OBJDIR) $(BINDIR)
-	
-clean-test:
-	@echo "[makefile] Removing tests/obj/ and tests/bin/"
-	@rm -rf $(TEST_OBJDIR) $(TEST_BINDIR)
 
 clean-all:
 	@$(MAKE) clean
-	@$(MAKE) clean-test
 	@echo "[makefile] Removing log files"
 	@rm -f *.log
 
-test: $(TEST_BINDIR)/$(TEST_TARGET)
-	@echo "[makefile] Running tests..."
-	@./$(TEST_BINDIR)/$(TEST_TARGET)
+run-client: client
+	@echo "[makefile] Running $(BINDIR)/$(CLIENT_TARGET)"
+	@./$(BINDIR)/$(CLIENT_TARGET)
 
-build-tests: $(TEST_BINDIR)/$(TEST_TARGET)
-	@echo "[makefile] Tests built successfully -> $(TEST_BINDIR)/$(TEST_TARGET)"
+run-server: server
+	@echo "[makefile] Running $(BINDIR)/$(SERVER_TARGET)"
+	@./$(BINDIR)/$(SERVER_TARGET)
 
-run:
-	@$(MAKE) core
-	@$(MAKE) app
-	@echo "[makefile] Running ./$(BINDIR)/$(TARGET)"
-	./$(BINDIR)/$(TARGET)
+run-test: test
+	@echo "[makefile] Running $(BINDIR)/$(TEST_TARGET)"
+	@./$(BINDIR)/$(TEST_TARGET)
+
 
 help:
 	@echo "Usage: make <target>"
-	@echo
-	@echo "Targets:"
-	@echo "  core        Build core objects incrementally (platform=$(PLATFORM))"
-	@echo "  app         Build and link the app binary -> $(BINDIR)/$(TARGET)"
-	@echo "  build-tests Build test executable without running -> $(TEST_BINDIR)/$(TEST_TARGET)"
-	@echo "  test        Build and run all tests -> $(TEST_BINDIR)/$(TEST_TARGET)"
-	@echo "  run         Build (incremental) and run ./$(BINDIR)/$(TARGET)"
-	@echo "  clean       Remove $(OBJDIR) and $(BINDIR)"
-	@echo "  clean-test  Remove $(TEST_OBJDIR) and $(TEST_BINDIR)"
-	@echo "  clean-all   Remove $(OBJDIR), $(BINDIR), $(TEST_OBJDIR), $(TEST_BINDIR) and .log files"
-	@echo "  help        Show this dialog"
+	@echo ""
+	@echo "Build Targets:"
+	@echo "  all            Build all executables (client, server, test)"
+	@echo "  client         Build $(CLIENT_TARGET)"
+	@echo "  server         Build $(SERVER_TARGET)"
+	@echo "  test           Build $(TEST_TARGET)"
+	@echo ""
+	@echo "Run Targets:"
+	@echo "  run-client     Build and run $(CLIENT_TARGET)"
+	@echo "  run-server     Build and run $(SERVER_TARGET)"
+	@echo "  run-test       Build and run $(TEST_TARGET)"
+	@echo ""
+	@echo "Cleanup Targets:"
+	@echo "  clean          Remove $(OBJDIR)/ and $(BINDIR)/"
+	@echo "  clean-all      Remove all build artifacts and log files"
+	@echo ""
+	@echo "Other:"
+	@echo "  help           Show this message"
+	@echo ""
+	@echo "Platform: $(PLATFORM)"
 
 # ----- Include dependencies if present -----
--include $(CORE_DEPS) $(APP_DEPS) $(TEST_DEPS)
+-include $(CORE_DEPS) $(CLIENT_DEPS) $(SERVER_DEPS) $(TEST_DEPS)
